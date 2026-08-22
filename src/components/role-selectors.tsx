@@ -1,17 +1,17 @@
 // No 'use client' here: SkillPathExplorer is the one client entry point, and
 // everything it imports is already part of that client subtree.
-import type { Profile, Role } from '@/types/domain';
+import type { Role } from '@/types/domain';
 
 /**
  * Two selectors, grouped by Domain — the fifth node type earns its place here
  * rather than sitting unread in the graph.
  *
- * A path can only be built for a transition somebody in the graph is actually
- * making, so the CTA stays disabled until the pair matches a seeded profile.
+ * Any pair of distinct roles is answerable, because the path is computed from
+ * what the two roles require rather than from a person who happens to be
+ * making that move.
  */
 export function RoleSelectors({
   roles,
-  profiles,
   currentRoleId,
   targetRoleId,
   onCurrentRoleChange,
@@ -19,15 +19,15 @@ export function RoleSelectors({
   onSubmit,
 }: {
   roles: Role[];
-  profiles: Profile[];
   currentRoleId: string;
   targetRoleId: string;
   onCurrentRoleChange: (id: string) => void;
   onTargetRoleChange: (id: string) => void;
-  onSubmit: (personId: string) => void;
+  onSubmit: (currentRoleId: string, targetRoleId: string) => void;
 }) {
-  const match = findProfile(profiles, currentRoleId, targetRoleId);
   const bothChosen = currentRoleId !== '' && targetRoleId !== '';
+  const sameRole = bothChosen && currentRoleId === targetRoleId;
+  const ready = bothChosen && !sameRole;
 
   return (
     <section className="rounded-xl border border-black/10 p-6 dark:border-white/15">
@@ -51,13 +51,13 @@ export function RoleSelectors({
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <button
           type="button"
-          disabled={!match}
-          onClick={() => match && onSubmit(match.personId)}
+          disabled={!ready}
+          onClick={() => ready && onSubmit(currentRoleId, targetRoleId)}
           className="rounded-lg bg-foreground px-5 py-2.5 text-sm font-medium text-background disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Show my skill path
+          Show the skill path
         </button>
-        <p className="text-sm opacity-70">{hint(bothChosen, match)}</p>
+        <p className="text-sm opacity-70">{hint(bothChosen, sameRole)}</p>
       </div>
     </section>
   );
@@ -102,14 +102,10 @@ function RoleSelect({
   );
 }
 
-function hint(bothChosen: boolean, match: Profile | undefined) {
-  if (match) return `Following ${match.personName}'s transition.`;
-  if (bothChosen) return 'No profile in the graph makes this transition yet.';
+function hint(bothChosen: boolean, sameRole: boolean) {
+  if (sameRole) return 'Pick a different target role.';
+  if (bothChosen) return 'Ready.';
   return 'Pick both roles to continue.';
-}
-
-function findProfile(profiles: Profile[], currentRoleId: string, targetRoleId: string) {
-  return profiles.find((p) => p.currentRole.id === currentRoleId && p.targetRole.id === targetRoleId);
 }
 
 /** Roles arrive ordered by domain then title, so insertion order is the order. */

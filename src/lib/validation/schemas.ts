@@ -9,3 +9,4 @@ export const idParam = z
 
 export const personIdParams = z.object({ personId: idParam });
 export const skillIdParams = z.object({ skillId: idParam });
+export const transitionParams = z.object({ currentRoleId: idParam, targetRoleId: idParam });

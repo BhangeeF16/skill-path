@@ -1,8 +1,20 @@
 # SkillPath
 
-Graph-powered career skill gap analysis. Pick where you are and where you want to be; SkillPath compares the target role's requirements against the skills you hold, then walks the prerequisite graph to say what to learn and in what order.
+Graph-powered career skill gap analysis. Pick where you are and where you want to be; SkillPath compares the target role's requirements against the skills the current role already covers, then walks the prerequisite graph to say what to learn and in what order.
 
 The calculation is graph traversal and arithmetic. No model is involved, so the same graph always produces the same screen.
+
+### Two flows, one traversal
+
+| | Explorer (`/`) | Case studies (`/case-studies`) |
+| --- | --- | --- |
+| Input | Two role ids | One person id |
+| Baseline | What the **current role** requires | What the **person** actually holds (`HAS_SKILL`) |
+| Answers | Any of the 10 × 10 role pairs | The three seeded transitions |
+
+Both subtract a baseline from the target role's `REQUIRED_BY` set and traverse `PREREQUISITE_FOR` for whatever is left, so they share the gap query shape, the mapper, and the whole UI. Only the baseline differs.
+
+The explorer is the product: it works for a visitor the graph has never heard of. The case studies exist because the assignment specifies a skill path service keyed on `personId` — they keep that flow real and show what the `HAS_SKILL` edge buys you. Compare Frontend Engineer → Full Stack Engineer in the explorer with Jordan Meyer's page: same pair, different gaps, because Jordan knows things the role does not assume.
 
 ## Setup
 
@@ -72,12 +84,14 @@ MATCH path = (prereq:Skill)-[:PREREQUISITE_FOR*1..3]->(skill:Skill {id: $skillId
 
 In SQL that is a recursive CTE per query. Here the depth is a number in the pattern.
 
-**Gap detection is a negated pattern.** "Required by the target role, and not held by this person":
+**Gap detection is a negated pattern.** "Required by the target role, and not already required by the current one":
 
 ```cypher
 MATCH (missing:Skill)-[:REQUIRED_BY]->(target)
-WHERE NOT (p)-[:HAS_SKILL]->(missing)
+WHERE NOT (missing)-[:REQUIRED_BY]->(current)
 ```
+
+Swap the second line for `WHERE NOT (p)-[:HAS_SKILL]->(missing)` and the same query answers the case-study question instead. The baseline is one pattern, not a different algorithm.
 
 ## Explainability
 
@@ -97,6 +111,8 @@ Ordering is explicit everywhere it is visible: gaps by importance then name, pre
 | Q09 (prerequisites) | `PREREQUISITES` + `toPrerequisiteSteps` | Q09 returns a raw path with no `ORDER BY`, which is not deterministic. The shipped query flattens the path to one row per prerequisite with `min(length(path))` as depth; the ordering is applied in the repository mapper. |
 | Q02 / Q03 (current and target role) | plus `OPTIONAL MATCH (role)-[:BELONGS_TO]->(domain:Domain)` | Otherwise `Domain` is seeded but never read. The projection feeds the domain chips and the grouped selectors. |
 
+Four statements have no catalog entry because the catalog assumes a `Person` is always present: `ROLE_TRANSITION_PATH`, `ROLE_REQUIREMENTS`, `SHARED_REQUIREMENTS`, and `ROLE_BY_ID`. `ROLE_TRANSITION_PATH` is `SKILL_PATH` with `NOT (skill)-[:REQUIRED_BY]->(current)` in place of `NOT (p)-[:HAS_SKILL]->(skill)` — one substitution, same traversal.
+
 ## Seeding
 
 `npm run seed` is idempotent. Every node and relationship is merged on identity only, with properties applied in a following `SET`:
@@ -108,15 +124,15 @@ SET h.proficiency = row.proficiency
 
 Writing `MERGE (p)-[:HAS_SKILL {proficiency: 3}]->(s)` instead would match on the property, so changing a 3 to a 4 would create a second edge. Run the seed as many times as you like; the counts do not move.
 
-Three seeded transitions:
+Three seeded people, shown on `/case-studies`:
 
-| Person | Today | Target |
-| --- | --- | --- |
-| Avery Shah | Senior Backend Engineer | Senior AI Engineer |
-| Jordan Meyer | Frontend Engineer | Full Stack Engineer |
-| Sam Okafor | Data Analyst | Data Engineer |
+| Person | Today | Target | Requirements met |
+| --- | --- | --- | --- |
+| Avery Shah | Senior Backend Engineer | Senior AI Engineer | 3 of 11 |
+| Jordan Meyer | Frontend Engineer | Full Stack Engineer | 5 of 10 |
+| Sam Okafor | Data Analyst | Data Engineer | 2 of 9 |
 
-The role selectors list every role in the graph. A pair with no seeded profile leaves the button disabled — there is no person to compute a path for.
+Every one of the 10 roles carries `REQUIRED_BY` edges, not just the six these three people occupy. The explorer accepts any pair, so a role with no requirements would answer with an empty path that reads like a broken screen rather than an honest one.
 
 ## Errors
 
@@ -127,7 +143,7 @@ Six codes, one response shape, `{ "error": { "code", "message" } }`:
 | `CONFIGURATION_ERROR` | 500 | Environment variables missing or malformed |
 | `DATABASE_UNAVAILABLE` | 503 | Cannot reach the graph |
 | `QUERY_FAILED` | 500 | The database rejected the query |
-| `NOT_FOUND` | 404 | No such person or skill |
+| `NOT_FOUND` | 404 | No such person, role, or skill |
 | `VALIDATION_ERROR` | 400 | Bad route parameter |
 | `UNKNOWN_ERROR` | 500 | Anything else |
 
@@ -147,6 +163,7 @@ npm test
 | Route | Returns |
 | --- | --- |
 | `GET /api/health` | `{ status: "ok" }` or an error code |
-| `GET /api/profiles` | Every role, plus the seeded transitions |
-| `GET /api/skill-path/:personId` | The full skill path: roles, held skills, requirements, matches, gaps, coverage |
+| `GET /api/profiles` | Every role, plus the three seeded transitions |
+| `GET /api/transitions/:currentRoleId/:targetRoleId` | The skill path between two roles — no person involved |
+| `GET /api/skill-path/:personId` | The same shape for one seeded person: roles, held skills, requirements, matches, gaps, coverage |
 | `GET /api/skills/:skillId` | One skill, its prerequisite chain, and supporting tools |

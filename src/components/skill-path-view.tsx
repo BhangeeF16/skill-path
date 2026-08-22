@@ -28,6 +28,11 @@ export function SkillPathView({
     <div className="space-y-8">
       <TransitionHeader path={path} />
       <Coverage
+        label={
+          path.person
+            ? `Requirements ${path.person.name} already meets`
+            : `Requirements ${path.currentRole.title} already covers`
+        }
         matching={path.matchingSkills.length}
         required={path.targetRequirements.length}
         coverage={path.coverage}
@@ -40,7 +45,11 @@ export function SkillPathView({
 
         {path.gaps.length === 0 ? (
           <EmptyCard
-            title="You already hold every skill this role requires."
+            title={
+              path.person
+                ? `${path.person.name} already holds every skill this role requires.`
+                : `${path.currentRole.title} already covers everything ${path.targetRole.title} requires.`
+            }
             hint="Pick a further target role to see a longer path."
           />
         ) : (
@@ -79,7 +88,7 @@ export function SkillPathView({
 function TransitionHeader({ path }: { path: SkillPath }) {
   return (
     <header className="rounded-xl border border-black/10 p-6 dark:border-white/15">
-      <p className="text-sm opacity-70">{path.person.name}</p>
+      {path.person ? <p className="text-sm opacity-70">{path.person.name}</p> : null}
       <div className="mt-2 flex flex-wrap items-center gap-3">
         <RoleBlock role={path.currentRole} caption="Today" />
         <span aria-hidden className="text-2xl opacity-40">
@@ -105,13 +114,23 @@ function RoleBlock({ role, caption }: { role: Role; caption: string }) {
   );
 }
 
-function Coverage({ matching, required, coverage }: { matching: number; required: number; coverage: number }) {
+function Coverage({
+  label,
+  matching,
+  required,
+  coverage,
+}: {
+  label: string;
+  matching: number;
+  required: number;
+  coverage: number;
+}) {
   const percent = Math.round(coverage * 100);
 
   return (
     <section>
       <div className="mb-1.5 flex items-baseline justify-between text-sm">
-        <span className="font-medium">Requirements already met</span>
+        <span className="font-medium">{label}</span>
         <span className="opacity-70">
           {matching} of {required} ({percent}%)
         </span>
@@ -121,7 +140,7 @@ function Coverage({ matching, required, coverage }: { matching: number; required
         aria-valuenow={percent}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label="Requirements already met"
+        aria-label={label}
         className="h-2.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/15"
       >
         <div className="h-full rounded-full bg-emerald-500 transition-[width]" style={{ width: `${percent}%` }} />

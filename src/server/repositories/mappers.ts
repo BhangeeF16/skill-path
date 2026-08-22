@@ -1,4 +1,4 @@
-import type { Importance, PrerequisiteStep, Role, Tool } from '@/types/domain';
+import type { Importance, PrerequisiteStep, Role, SkillGap, Tool } from '@/types/domain';
 
 /** Shape of a role row: the catalog columns plus the domain projection. */
 export interface RoleRow {
@@ -25,6 +25,13 @@ export interface PrerequisiteRow {
   tools: ToolRow[];
 }
 
+export interface SkillPathRow {
+  id: string;
+  name: string;
+  importance: Importance;
+  prerequisites: PrerequisiteRow[];
+}
+
 export function toRole(row: RoleRow): Role {
   return {
     id: row.id,
@@ -48,6 +55,34 @@ const IMPORTANCE_RANK: Record<Importance, number> = { core: 1, important: 2, sup
 
 export function importanceRank(importance: Importance): number {
   return IMPORTANCE_RANK[importance] ?? 99;
+}
+
+/**
+ * Both skill-path traversals — the person one and the role-to-role one —
+ * return the same row shape and differ only in what they treat as the
+ * baseline, so they share this mapper.
+ *
+ * `reason` carries the facts behind each gap, not a sentence; the UI writes
+ * the copy. `startWith` is the deepest prerequisite, which is where learning
+ * begins.
+ */
+export function toSkillGaps(rows: SkillPathRow[], targetRoleTitle: string): SkillGap[] {
+  return rows
+    .map((row) => {
+      const prerequisites = toPrerequisiteSteps(row.prerequisites ?? []);
+      return {
+        id: row.id,
+        name: row.name,
+        importance: row.importance,
+        prerequisites,
+        reason: {
+          targetRoleTitle,
+          importance: row.importance,
+          startWith: prerequisites.length > 0 ? prerequisites[0].name : null,
+        },
+      };
+    })
+    .sort((a, b) => importanceRank(a.importance) - importanceRank(b.importance) || a.name.localeCompare(b.name));
 }
 
 /**

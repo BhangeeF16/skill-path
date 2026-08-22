@@ -86,12 +86,20 @@ export interface Profile {
   targetRole: Role;
 }
 
+/**
+ * The same shape for both flows. A role-to-role transition has no Person, so
+ * the baseline is what the current role already requires; a case study has
+ * one, so the baseline is what that person actually holds. `person` is what
+ * tells the two apart, and it is the only thing the UI branches on.
+ */
 export interface SkillPath {
-  person: Person;
+  person: Person | null;
   currentRole: Role;
   targetRole: Role;
+  /** Empty in the role-to-role flow — nobody's skills are involved. */
   currentSkills: PersonSkill[];
   targetRequirements: RequiredSkill[];
+  /** Requirements already covered by the baseline. */
   matchingSkills: Skill[];
   gaps: SkillGap[];
   /** matchingSkills.length / targetRequirements.length, 0-1. */

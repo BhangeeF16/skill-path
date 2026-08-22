@@ -173,8 +173,85 @@ ORDER BY
 `;
 
 /**
- * Not in the catalog. Approach A resolves a selected role pair to a seeded
- * Person, so the selectors need the transitions the graph actually holds.
+ * Not in the catalog. The explorer answers "how do I get from role A to role
+ * B?" for any pair, with no Person involved, so the baseline is what the
+ * current role already requires rather than what one seeded person happens to
+ * know. Same traversal as SKILL_PATH with that one substitution.
+ *
+ *   Role (current) ◄──REQUIRED_BY── Skill        (the baseline, excluded)
+ *   Role (target)  ◄──REQUIRED_BY── Skill (missing)
+ *                                     ▲
+ *                      PREREQUISITE_FOR*1..3
+ *                                     │
+ *                     Skill (prereq) ◄──SUPPORTS── Tool
+ */
+export const ROLE_TRANSITION_PATH = `
+MATCH (current:Role {id: $currentRoleId})
+MATCH (target:Role {id: $targetRoleId})
+MATCH (missing:Skill)-[req:REQUIRED_BY]->(target)
+WHERE NOT (missing)-[:REQUIRED_BY]->(current)
+
+OPTIONAL MATCH path = (prereq:Skill)-[:PREREQUISITE_FOR*1..3]->(missing)
+WHERE NOT (prereq)-[:REQUIRED_BY]->(current)
+
+WITH missing, req, prereq,
+     min(length(path)) AS depth,
+     max(relationships(path)[0].strength) AS strength
+
+OPTIONAL MATCH (tool:Tool)-[sup:SUPPORTS]->(prereq)
+
+WITH missing, req, prereq, depth, strength,
+     collect(DISTINCT CASE WHEN tool IS NULL THEN null ELSE {
+       id: tool.id, name: tool.name, category: tool.category,
+       type: sup.type, suitableFor: sup.suitableFor
+     } END) AS tools
+
+WITH missing, req,
+     collect(CASE WHEN prereq IS NULL THEN null ELSE {
+       id: prereq.id, name: prereq.name, depth: depth, strength: strength, tools: tools
+     } END) AS prerequisites
+
+RETURN missing.id AS id,
+       missing.name AS name,
+       req.importance AS importance,
+       prerequisites
+ORDER BY
+  CASE req.importance
+    WHEN 'core' THEN 1
+    WHEN 'important' THEN 2
+    ELSE 3
+  END,
+  missing.name
+`;
+
+/** Not in the catalog. What one role requires, independent of any Person. */
+export const ROLE_REQUIREMENTS = `
+MATCH (skill:Skill)-[r:REQUIRED_BY]->(:Role {id: $roleId})
+RETURN skill.id AS id,
+       skill.name AS name,
+       r.importance AS importance
+ORDER BY skill.name
+`;
+
+/** Not in the catalog. Requirements both roles share — the head start. */
+export const SHARED_REQUIREMENTS = `
+MATCH (skill:Skill)-[:REQUIRED_BY]->(:Role {id: $targetRoleId})
+WHERE (skill)-[:REQUIRED_BY]->(:Role {id: $currentRoleId})
+RETURN skill.id AS id, skill.name AS name
+ORDER BY skill.name
+`;
+
+/** Not in the catalog. One role, for the transition header. */
+export const ROLE_BY_ID = `
+MATCH (role:Role {id: $roleId})
+OPTIONAL MATCH (role)-[:BELONGS_TO]->(domain:Domain)
+RETURN role.id AS id, role.title AS title, role.level AS level,
+       domain.id AS domainId, domain.name AS domainName
+`;
+
+/**
+ * Not in the catalog. The three seeded Person nodes, shown on the case studies
+ * page as worked examples of the same traversal.
  */
 export const PROFILES = `
 MATCH (p:Person)-[:WORKING_AS]->(current:Role)

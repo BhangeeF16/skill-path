@@ -135,6 +135,42 @@ export const ROLE_REQUIREMENTS = [
   { roleId: 'role-data-analyst', skillId: 'skill-data-visualisation', importance: 'core' },
   { roleId: 'role-data-analyst', skillId: 'skill-business-intelligence', importance: 'important' },
   { roleId: 'role-data-analyst', skillId: 'skill-statistics', importance: 'important' },
+
+  // The explorer lets anyone pick any pair of roles, so every role needs
+  // requirements — otherwise a pair involving one of these would return an
+  // empty path and read as a broken screen.
+  { roleId: 'role-backend-engineer', skillId: 'skill-nodejs', importance: 'core' },
+  { roleId: 'role-backend-engineer', skillId: 'skill-rest-api-design', importance: 'core' },
+  { roleId: 'role-backend-engineer', skillId: 'skill-sql', importance: 'core' },
+  { roleId: 'role-backend-engineer', skillId: 'skill-relational-databases', importance: 'important' },
+  { roleId: 'role-backend-engineer', skillId: 'skill-typescript', importance: 'important' },
+  { roleId: 'role-backend-engineer', skillId: 'skill-caching', importance: 'supporting' },
+  { roleId: 'role-backend-engineer', skillId: 'skill-containerisation', importance: 'supporting' },
+
+  { roleId: 'role-analytics-engineer', skillId: 'skill-sql', importance: 'core' },
+  { roleId: 'role-analytics-engineer', skillId: 'skill-data-modelling', importance: 'core' },
+  { roleId: 'role-analytics-engineer', skillId: 'skill-data-warehousing', importance: 'important' },
+  { roleId: 'role-analytics-engineer', skillId: 'skill-business-intelligence', importance: 'important' },
+  { roleId: 'role-analytics-engineer', skillId: 'skill-data-visualisation', importance: 'important' },
+  { roleId: 'role-analytics-engineer', skillId: 'skill-python', importance: 'supporting' },
+  { roleId: 'role-analytics-engineer', skillId: 'skill-ci-cd', importance: 'supporting' },
+
+  { roleId: 'role-ml-engineer', skillId: 'skill-python', importance: 'core' },
+  { roleId: 'role-ml-engineer', skillId: 'skill-machine-learning', importance: 'core' },
+  { roleId: 'role-ml-engineer', skillId: 'skill-statistics', importance: 'core' },
+  { roleId: 'role-ml-engineer', skillId: 'skill-deep-learning', importance: 'important' },
+  { roleId: 'role-ml-engineer', skillId: 'skill-mlops', importance: 'important' },
+  { roleId: 'role-ml-engineer', skillId: 'skill-mathematics-for-ml', importance: 'important' },
+  { roleId: 'role-ml-engineer', skillId: 'skill-linear-algebra', importance: 'supporting' },
+  { roleId: 'role-ml-engineer', skillId: 'skill-containerisation', importance: 'supporting' },
+
+  { roleId: 'role-platform-engineer', skillId: 'skill-containerisation', importance: 'core' },
+  { roleId: 'role-platform-engineer', skillId: 'skill-container-orchestration', importance: 'core' },
+  { roleId: 'role-platform-engineer', skillId: 'skill-ci-cd', importance: 'core' },
+  { roleId: 'role-platform-engineer', skillId: 'skill-cloud-infrastructure', importance: 'core' },
+  { roleId: 'role-platform-engineer', skillId: 'skill-system-design', importance: 'important' },
+  { roleId: 'role-platform-engineer', skillId: 'skill-caching', importance: 'supporting' },
+  { roleId: 'role-platform-engineer', skillId: 'skill-python', importance: 'supporting' },
 ];
 
 /**

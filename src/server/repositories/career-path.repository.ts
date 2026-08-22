@@ -1,13 +1,14 @@
 import { readOne, readQuery } from '@/server/graph/driver';
 import * as Q from './cypher';
 import {
-  importanceRank,
   toPrerequisiteSteps,
+  toSkillGaps,
   toTool,
   type PrerequisiteRow,
+  type SkillPathRow,
   type ToolRow,
 } from './mappers';
-import type { Importance, PrerequisiteStep, RequiredSkill, Skill, SkillGap, Tool } from '@/types/domain';
+import type { PrerequisiteStep, RequiredSkill, Skill, SkillGap, Tool } from '@/types/domain';
 
 export async function getTargetRequirements(personId: string): Promise<RequiredSkill[]> {
   return readQuery<RequiredSkill>(Q.TARGET_REQUIREMENTS, { personId });
@@ -36,37 +37,8 @@ export async function getSkill(skillId: string): Promise<Skill> {
   return readOne<Skill>(Q.SKILL_BY_ID, { skillId }, 'We could not find that skill.');
 }
 
-interface SkillPathRow {
-  id: string;
-  name: string;
-  importance: Importance;
-  prerequisites: PrerequisiteRow[];
-}
-
-/**
- * Gaps with their prerequisite chains and tools, in one traversal.
- *
- * `reason` carries the facts behind each gap, not a sentence — the UI writes
- * the copy. `startWith` is the deepest prerequisite, which is where learning
- * begins.
- */
+/** Gaps with their prerequisite chains and tools, in one traversal. */
 export async function getSkillPath(personId: string, targetRoleTitle: string): Promise<SkillGap[]> {
   const rows = await readQuery<SkillPathRow>(Q.SKILL_PATH, { personId });
-
-  return rows
-    .map((row) => {
-      const prerequisites = toPrerequisiteSteps(row.prerequisites ?? []);
-      return {
-        id: row.id,
-        name: row.name,
-        importance: row.importance,
-        prerequisites,
-        reason: {
-          targetRoleTitle,
-          importance: row.importance,
-          startWith: prerequisites.length > 0 ? prerequisites[0].name : null,
-        },
-      };
-    })
-    .sort((a, b) => importanceRank(a.importance) - importanceRank(b.importance) || a.name.localeCompare(b.name));
+  return toSkillGaps(rows, targetRoleTitle);
 }

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { SkillPathExplorer } from '@/components/skill-path-explorer';
 
 export default function Home() {
@@ -7,8 +8,11 @@ export default function Home() {
         <h1 className="text-3xl font-semibold tracking-tight">SkillPath</h1>
         <p className="mt-2 max-w-2xl opacity-70">
           Pick where you are and where you want to be. SkillPath compares what the target role requires against
-          what you already have, then shows what to learn and in what order.
+          what your current role already covers, then shows what to learn and in what order.
         </p>
+        <Link href="/case-studies" className="mt-4 inline-block text-sm underline opacity-70 hover:opacity-100">
+          See three worked examples &rarr;
+        </Link>
       </header>
 
       <SkillPathExplorer />
