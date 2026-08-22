@@ -178,7 +178,13 @@ ORDER BY
  * current role already requires rather than what one seeded person happens to
  * know. Same traversal as SKILL_PATH with that one substitution.
  *
- *   Role (current) ◄──REQUIRED_BY── Skill        (the baseline, excluded)
+ * $haveSkillIds widens the baseline with skills the visitor ticked. A title
+ * implies a floor, not a ceiling — plenty of Data Analysts write Python, and
+ * the path is wrong if it tells them to learn it. Empty list is the common
+ * case and costs nothing.
+ *
+ *   Role (current) ◄──REQUIRED_BY── Skill        ┐
+ *   $haveSkillIds ─────────────────► Skill       ┘ the baseline, excluded
  *   Role (target)  ◄──REQUIRED_BY── Skill (missing)
  *                                     ▲
  *                      PREREQUISITE_FOR*1..3
@@ -190,9 +196,11 @@ MATCH (current:Role {id: $currentRoleId})
 MATCH (target:Role {id: $targetRoleId})
 MATCH (missing:Skill)-[req:REQUIRED_BY]->(target)
 WHERE NOT (missing)-[:REQUIRED_BY]->(current)
+  AND NOT missing.id IN $haveSkillIds
 
 OPTIONAL MATCH path = (prereq:Skill)-[:PREREQUISITE_FOR*1..3]->(missing)
 WHERE NOT (prereq)-[:REQUIRED_BY]->(current)
+  AND NOT prereq.id IN $haveSkillIds
 
 WITH missing, req, prereq,
      min(length(path)) AS depth,
@@ -233,11 +241,23 @@ RETURN skill.id AS id,
 ORDER BY skill.name
 `;
 
-/** Not in the catalog. Requirements both roles share — the head start. */
-export const SHARED_REQUIREMENTS = `
+/**
+ * Not in the catalog. Requirements the baseline already covers — the head
+ * start. Same two halves as ROLE_TRANSITION_PATH's exclusion, stated
+ * positively, so the coverage bar and the gap list cannot disagree.
+ */
+export const COVERED_REQUIREMENTS = `
 MATCH (skill:Skill)-[:REQUIRED_BY]->(:Role {id: $targetRoleId})
 WHERE (skill)-[:REQUIRED_BY]->(:Role {id: $currentRoleId})
+   OR skill.id IN $haveSkillIds
 RETURN skill.id AS id, skill.name AS name
+ORDER BY skill.name
+`;
+
+/** Not in the catalog. Every skill, for the "what do you already know" picker. */
+export const SKILLS = `
+MATCH (skill:Skill)
+RETURN skill.id AS id, skill.name AS name, skill.description AS description
 ORDER BY skill.name
 `;
 

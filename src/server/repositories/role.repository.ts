@@ -20,13 +20,18 @@ export async function getRoleRequirements(roleId: string): Promise<RequiredSkill
 }
 
 /**
- * Requirements the two roles share. In a role-to-role transition these are the
- * head start: the target asks for them and the current role already did.
+ * Requirements the baseline already covers: required by both roles, or ticked
+ * by the visitor. These are the head start.
  */
-export async function getSharedRequirements(currentRoleId: string, targetRoleId: string): Promise<Skill[]> {
-  const rows = await readQuery<{ id: string; name: string }>(Q.SHARED_REQUIREMENTS, {
+export async function getCoveredRequirements(
+  currentRoleId: string,
+  targetRoleId: string,
+  haveSkillIds: string[],
+): Promise<Skill[]> {
+  const rows = await readQuery<{ id: string; name: string }>(Q.COVERED_REQUIREMENTS, {
     currentRoleId,
     targetRoleId,
+    haveSkillIds,
   });
   return rows.map((row) => ({ ...row, description: '' }));
 }
@@ -36,7 +41,12 @@ export async function getRoleTransitionPath(
   currentRoleId: string,
   targetRoleId: string,
   targetRoleTitle: string,
+  haveSkillIds: string[],
 ): Promise<SkillGap[]> {
-  const rows = await readQuery<SkillPathRow>(Q.ROLE_TRANSITION_PATH, { currentRoleId, targetRoleId });
+  const rows = await readQuery<SkillPathRow>(Q.ROLE_TRANSITION_PATH, {
+    currentRoleId,
+    targetRoleId,
+    haveSkillIds,
+  });
   return toSkillGaps(rows, targetRoleTitle);
 }

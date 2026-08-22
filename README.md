@@ -8,9 +8,11 @@ The calculation is graph traversal and arithmetic. No model is involved, so the 
 
 | | Explorer (`/`) | Case studies (`/case-studies`) |
 | --- | --- | --- |
-| Input | Two role ids | One person id |
-| Baseline | What the **current role** requires | What the **person** actually holds (`HAS_SKILL`) |
+| Input | Two role ids, plus any skills you tick | One person id |
+| Baseline | What the **current role** requires, **plus** what you ticked | What the **person** actually holds (`HAS_SKILL`) |
 | Answers | Any of the 10 × 10 role pairs | The three seeded transitions |
+
+A job title is a floor, not a ceiling. Deriving the baseline from the current role alone would tell a Data Analyst who already writes Python to go learn Python, so the explorer offers an optional skills picker and unions it into the baseline. Ticking Python on Data Analyst → Data Engineer moves coverage from 1/9 to 2/9 and drops Python out of the gap list *and* out of the prerequisite chain under ETL Pipelines — one exclusion, applied at both levels.
 
 Both subtract a baseline from the target role's `REQUIRED_BY` set and traverse `PREREQUISITE_FOR` for whatever is left, so they share the gap query shape, the mapper, and the whole UI. Only the baseline differs.
 
@@ -84,14 +86,15 @@ MATCH path = (prereq:Skill)-[:PREREQUISITE_FOR*1..3]->(skill:Skill {id: $skillId
 
 In SQL that is a recursive CTE per query. Here the depth is a number in the pattern.
 
-**Gap detection is a negated pattern.** "Required by the target role, and not already required by the current one":
+**Gap detection is a negated pattern.** "Required by the target role, and not already covered":
 
 ```cypher
 MATCH (missing:Skill)-[:REQUIRED_BY]->(target)
 WHERE NOT (missing)-[:REQUIRED_BY]->(current)
+  AND NOT missing.id IN $haveSkillIds
 ```
 
-Swap the second line for `WHERE NOT (p)-[:HAS_SKILL]->(missing)` and the same query answers the case-study question instead. The baseline is one pattern, not a different algorithm.
+Swap those two lines for `WHERE NOT (p)-[:HAS_SKILL]->(missing)` and the same query answers the case-study question instead. The baseline is one predicate, not a different algorithm.
 
 ## Explainability
 
@@ -111,7 +114,7 @@ Ordering is explicit everywhere it is visible: gaps by importance then name, pre
 | Q09 (prerequisites) | `PREREQUISITES` + `toPrerequisiteSteps` | Q09 returns a raw path with no `ORDER BY`, which is not deterministic. The shipped query flattens the path to one row per prerequisite with `min(length(path))` as depth; the ordering is applied in the repository mapper. |
 | Q02 / Q03 (current and target role) | plus `OPTIONAL MATCH (role)-[:BELONGS_TO]->(domain:Domain)` | Otherwise `Domain` is seeded but never read. The projection feeds the domain chips and the grouped selectors. |
 
-Four statements have no catalog entry because the catalog assumes a `Person` is always present: `ROLE_TRANSITION_PATH`, `ROLE_REQUIREMENTS`, `SHARED_REQUIREMENTS`, and `ROLE_BY_ID`. `ROLE_TRANSITION_PATH` is `SKILL_PATH` with `NOT (skill)-[:REQUIRED_BY]->(current)` in place of `NOT (p)-[:HAS_SKILL]->(skill)` — one substitution, same traversal.
+Five statements have no catalog entry because the catalog assumes a `Person` is always present: `ROLE_TRANSITION_PATH`, `ROLE_REQUIREMENTS`, `COVERED_REQUIREMENTS`, `ROLE_BY_ID`, and `SKILLS`. `ROLE_TRANSITION_PATH` is `SKILL_PATH` with the baseline predicate substituted — same traversal, same `OPTIONAL MATCH` structure, same ordering.
 
 ## Seeding
 
@@ -164,6 +167,7 @@ npm test
 | --- | --- |
 | `GET /api/health` | `{ status: "ok" }` or an error code |
 | `GET /api/profiles` | Every role, plus the three seeded transitions |
-| `GET /api/transitions/:currentRoleId/:targetRoleId` | The skill path between two roles — no person involved |
+| `GET /api/skills` | Every skill, for the "what do you already know" picker |
+| `GET /api/transitions/:currentRoleId/:targetRoleId?have=id,id` | The skill path between two roles — no person involved. `have` is optional and widens the baseline |
 | `GET /api/skill-path/:personId` | The same shape for one seeded person: roles, held skills, requirements, matches, gaps, coverage |
 | `GET /api/skills/:skillId` | One skill, its prerequisite chain, and supporting tools |

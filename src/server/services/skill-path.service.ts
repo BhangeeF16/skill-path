@@ -1,10 +1,10 @@
 import { getCurrentRole, getPerson, getPersonSkills, getTargetRole } from '@/server/repositories/person.repository';
 import { getMatchingSkills, getSkillPath, getTargetRequirements } from '@/server/repositories/career-path.repository';
 import {
+  getCoveredRequirements,
   getRole,
   getRoleRequirements,
   getRoleTransitionPath,
-  getSharedRequirements,
 } from '@/server/repositories/role.repository';
 import type { Person, PersonSkill, RequiredSkill, Role, Skill, SkillGap, SkillPath } from '@/types/domain';
 
@@ -46,16 +46,24 @@ export function composeSkillPath(inputs: SkillPathInputs): SkillPath {
  * Person is involved, so the baseline is what the current role already
  * requires — a Frontend Engineer is assumed to know what Frontend Engineer
  * asks for, and the path shows only what the target adds on top.
+ *
+ * `haveSkillIds` widens that baseline with whatever the visitor ticked. A job
+ * title is a floor, not a ceiling, and a path that tells someone to learn what
+ * they already know is a wrong answer.
  */
-export async function buildRoleTransition(currentRoleId: string, targetRoleId: string): Promise<SkillPath> {
+export async function buildRoleTransition(
+  currentRoleId: string,
+  targetRoleId: string,
+  haveSkillIds: string[] = [],
+): Promise<SkillPath> {
   // Resolved first so an unknown id reports "we could not find that role"
   // rather than an empty path that reads like a missing seed.
   const [currentRole, targetRole] = await Promise.all([getRole(currentRoleId), getRole(targetRoleId)]);
 
   const [targetRequirements, matchingSkills, gaps] = await Promise.all([
     getRoleRequirements(targetRoleId),
-    getSharedRequirements(currentRoleId, targetRoleId),
-    getRoleTransitionPath(currentRoleId, targetRoleId, targetRole.title),
+    getCoveredRequirements(currentRoleId, targetRoleId, haveSkillIds),
+    getRoleTransitionPath(currentRoleId, targetRoleId, targetRole.title, haveSkillIds),
   ]);
 
   return composeSkillPath({

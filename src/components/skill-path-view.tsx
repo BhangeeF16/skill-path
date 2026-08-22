@@ -28,11 +28,10 @@ export function SkillPathView({
     <div className="space-y-8">
       <TransitionHeader path={path} />
       <Coverage
-        label={
-          path.person
-            ? `Requirements ${path.person.name} already meets`
-            : `Requirements ${path.currentRole.title} already covers`
-        }
+        // Neutral in the role flow because the baseline there is the current
+        // role's requirements plus anything the visitor ticked, and this
+        // component cannot tell how much of it came from which.
+        label={path.person ? `Requirements ${path.person.name} already meets` : 'Requirements you already cover'}
         matching={path.matchingSkills.length}
         required={path.targetRequirements.length}
         coverage={path.coverage}
@@ -48,7 +47,7 @@ export function SkillPathView({
             title={
               path.person
                 ? `${path.person.name} already holds every skill this role requires.`
-                : `${path.currentRole.title} already covers everything ${path.targetRole.title} requires.`
+                : `You already cover everything ${path.targetRole.title} requires.`
             }
             hint="Pick a further target role to see a longer path."
           />

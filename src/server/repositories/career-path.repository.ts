@@ -37,6 +37,11 @@ export async function getSkill(skillId: string): Promise<Skill> {
   return readOne<Skill>(Q.SKILL_BY_ID, { skillId }, 'We could not find that skill.');
 }
 
+/** Every skill, for the "what do you already know" picker. */
+export async function listSkills(): Promise<Skill[]> {
+  return readQuery<Skill>(Q.SKILLS);
+}
+
 /** Gaps with their prerequisite chains and tools, in one traversal. */
 export async function getSkillPath(personId: string, targetRoleTitle: string): Promise<SkillGap[]> {
   const rows = await readQuery<SkillPathRow>(Q.SKILL_PATH, { personId });

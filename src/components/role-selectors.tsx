@@ -1,5 +1,6 @@
 // No 'use client' here: SkillPathExplorer is the one client entry point, and
 // everything it imports is already part of that client subtree.
+import type { ReactNode } from 'react';
 import type { Role } from '@/types/domain';
 
 /**
@@ -17,6 +18,7 @@ export function RoleSelectors({
   onCurrentRoleChange,
   onTargetRoleChange,
   onSubmit,
+  children,
 }: {
   roles: Role[];
   currentRoleId: string;
@@ -24,6 +26,8 @@ export function RoleSelectors({
   onCurrentRoleChange: (id: string) => void;
   onTargetRoleChange: (id: string) => void;
   onSubmit: (currentRoleId: string, targetRoleId: string) => void;
+  /** The skills picker — part of the same step, so it lives in this card. */
+  children?: ReactNode;
 }) {
   const bothChosen = currentRoleId !== '' && targetRoleId !== '';
   const sameRole = bothChosen && currentRoleId === targetRoleId;
@@ -47,6 +51,8 @@ export function RoleSelectors({
           onChange={onTargetRoleChange}
         />
       </div>
+
+      {children}
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <button
