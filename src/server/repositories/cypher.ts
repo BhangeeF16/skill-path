@@ -50,11 +50,22 @@ RETURN skill.id AS id,
 ORDER BY skill.name
 `;
 
-/** Q06 — requirements the person already meets. */
+/**
+ * Q06 — requirements the person already meets.
+ *
+ * Delta from catalog: the held skills are collected into an id list and
+ * filtered with IN, rather than tested with a `WHERE (p)-[:HAS_SKILL]->(skill)`
+ * pattern predicate. CognoDB Cloud evaluates that shorthand as always-true, so
+ * every requirement came back as "already met" in production while Neo4j 5.26
+ * got it right locally. The list form is plain Cypher and behaves the same on
+ * both. Applies to every statement below that used to subtract a baseline.
+ */
 export const MATCHING_SKILLS = `
 MATCH (p:Person {id: $personId})-[:TARGETING_TO]->(role:Role)
+OPTIONAL MATCH (p)-[:HAS_SKILL]->(held:Skill)
+WITH role, collect(held.id) AS heldIds
 MATCH (skill:Skill)-[:REQUIRED_BY]->(role)
-WHERE (p)-[:HAS_SKILL]->(skill)
+WHERE skill.id IN heldIds
 RETURN skill.id AS id, skill.name AS name
 ORDER BY skill.name
 `;
@@ -62,8 +73,10 @@ ORDER BY skill.name
 /** Q07 — requirements the person is missing. */
 export const SKILL_GAPS = `
 MATCH (p:Person {id: $personId})-[:TARGETING_TO]->(role:Role)
+OPTIONAL MATCH (p)-[:HAS_SKILL]->(held:Skill)
+WITH role, collect(held.id) AS heldIds
 MATCH (skill:Skill)-[r:REQUIRED_BY]->(role)
-WHERE NOT (p)-[:HAS_SKILL]->(skill)
+WHERE NOT skill.id IN heldIds
 RETURN skill.id AS id,
        skill.name AS name,
        r.importance AS importance
@@ -136,11 +149,14 @@ RETURN skill.id AS id, skill.name AS name, skill.description AS description
  */
 export const SKILL_PATH = `
 MATCH (p:Person {id: $personId})-[:TARGETING_TO]->(target:Role)
+OPTIONAL MATCH (p)-[:HAS_SKILL]->(held:Skill)
+WITH target, collect(held.id) AS heldIds
+
 MATCH (missing:Skill)-[req:REQUIRED_BY]->(target)
-WHERE NOT (p)-[:HAS_SKILL]->(missing)
+WHERE NOT missing.id IN heldIds
 
 OPTIONAL MATCH path = (prereq:Skill)-[:PREREQUISITE_FOR*1..3]->(missing)
-WHERE NOT (p)-[:HAS_SKILL]->(prereq)
+WHERE NOT prereq.id IN heldIds
 
 WITH missing, req, prereq,
      min(length(path)) AS depth,
@@ -194,13 +210,14 @@ ORDER BY
 export const ROLE_TRANSITION_PATH = `
 MATCH (current:Role {id: $currentRoleId})
 MATCH (target:Role {id: $targetRoleId})
+OPTIONAL MATCH (covered:Skill)-[:REQUIRED_BY]->(current)
+WITH target, collect(covered.id) + $haveSkillIds AS baselineIds
+
 MATCH (missing:Skill)-[req:REQUIRED_BY]->(target)
-WHERE NOT (missing)-[:REQUIRED_BY]->(current)
-  AND NOT missing.id IN $haveSkillIds
+WHERE NOT missing.id IN baselineIds
 
 OPTIONAL MATCH path = (prereq:Skill)-[:PREREQUISITE_FOR*1..3]->(missing)
-WHERE NOT (prereq)-[:REQUIRED_BY]->(current)
-  AND NOT prereq.id IN $haveSkillIds
+WHERE NOT prereq.id IN baselineIds
 
 WITH missing, req, prereq,
      min(length(path)) AS depth,
@@ -247,9 +264,12 @@ ORDER BY skill.name
  * positively, so the coverage bar and the gap list cannot disagree.
  */
 export const COVERED_REQUIREMENTS = `
+MATCH (current:Role {id: $currentRoleId})
+OPTIONAL MATCH (covered:Skill)-[:REQUIRED_BY]->(current)
+WITH collect(covered.id) + $haveSkillIds AS baselineIds
+
 MATCH (skill:Skill)-[:REQUIRED_BY]->(:Role {id: $targetRoleId})
-WHERE (skill)-[:REQUIRED_BY]->(:Role {id: $currentRoleId})
-   OR skill.id IN $haveSkillIds
+WHERE skill.id IN baselineIds
 RETURN skill.id AS id, skill.name AS name
 ORDER BY skill.name
 `;
