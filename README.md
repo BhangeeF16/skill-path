@@ -23,13 +23,15 @@ Graph-powered career skill gap analysis. Pick where you are and where you want t
 
 The calculation is graph traversal and arithmetic. No model is involved, so the same graph always produces the same screen.
 
+for more information you may visit [Documentation](./docs/01-INDEX.md)
+
 ### Two flows, one traversal
 
-|          | Explorer (`/`)                                               | Case studies (`/case-studies`)                   |
-| -------- | ------------------------------------------------------------ | ------------------------------------------------ |
-| Input    | Two role ids, plus any skills you tick                       | One person id                                    |
-| Baseline | What the **current role** requires, **plus** what you ticked | What the **person** actually holds (`HAS_SKILL`) |
-| Answers  | Any of the 10 × 10 role pairs                                | The three seeded transitions                     |
+|          | Explorer (`/`)                                              | Case studies (`/case-studies`)                  |
+| -------- | ----------------------------------------------------------- | ----------------------------------------------- |
+| Input    | Two role ids, plus any skills you tick                      | One person id                                   |
+| Baseline | What the**current role** requires, **plus** what you ticked | What the**person** actually holds (`HAS_SKILL`) |
+| Answers  | Any of the 10 × 10 role pairs                               | The three seeded transitions                    |
 
 A job title is a floor, not a ceiling. Deriving the baseline from the current role alone would tell a Data Analyst who already writes Python to go learn Python, so the explorer offers an optional skills picker and unions it into the baseline. Ticking Python on Data Analyst → Data Engineer moves coverage from 1/9 to 2/9 and drops Python out of the gap list _and_ out of the prerequisite chain under ETL Pipelines — one exclusion, applied at both levels.
 
@@ -244,11 +246,23 @@ npm test
 
 ## API
 
-| Route                                                          | Returns                                                                                           |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `GET /api/health`                                              | `{ status: "ok" }` or an error code                                                               |
-| `GET /api/profiles`                                            | Every role, plus the three seeded transitions                                                     |
-| `GET /api/skills`                                              | Every skill, for the "what do you already know" picker                                            |
-| `GET /api/transitions/:currentRoleId/:targetRoleId?have=id,id` | The skill path between two roles — no person involved. `have` is optional and widens the baseline |
-| `GET /api/skill-path/:personId`                                | The same shape for one seeded person: roles, held skills, requirements, matches, gaps, coverage   |
-| `GET /api/skills/:skillId`                                     | One skill, its prerequisite chain, and supporting tools                                           |
+| Route                                                          | Returns                                                                                          |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `GET /api/health`                                              | `{ status: "ok" }` or an error code                                                              |
+| `GET /api/profiles`                                            | Every role, plus the three seeded transitions                                                    |
+| `GET /api/skills`                                              | Every skill, for the "what do you already know" picker                                           |
+| `GET /api/transitions/:currentRoleId/:targetRoleId?have=id,id` | The skill path between two roles — no person involved.`have` is optional and widens the baseline |
+| `GET /api/skill-path/:personId`                                | The same shape for one seeded person: roles, held skills, requirements, matches, gaps, coverage  |
+| `GET /api/skills/:skillId`                                     | One skill, its prerequisite chain, and supporting tools                                          |
+
+## Screenshots
+
+following are the screenshots from [LIVE](https://skill-path-production.up.railway.app/)
+
+![HOME](docs/screenshots/home.png)
+
+Skill Gap Explore:
+![SKILL GAPS](docs/screenshots/skill-gap-explore.png)
+
+Example Persons:
+![CASE STUDIES](docs/screenshots/case-studies.png)

@@ -1,4 +1,4 @@
-# SkillPath Documentation Pack
+# INDEX {documents-index}
 
 Files:
 
